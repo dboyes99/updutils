@@ -1,0 +1,61 @@
+.cm Text (c) IBM Corporation,1964-2020 (from IBM pub SC24-6271-02)
+.cm BookMaster Style BOOKHELP, for BLDEXEC  HELPCMS .
+.cm BOOKHELP source: BLDEXEC SCRPCMS C
+.cm BOOKHELP processed at 16:09:34 5 Oct 2020.
+.CS 1 ON
+ 
+›|BLDEXEC›%
+ 
+›|Brief Summary of Statement:›%
+ 
+ This command builds a new copy of an EXEC based on the update
+ information for the template file used.
+ 
+›|Use the BLDEXEC command to:›%
+ 
+ This command builds a new copy of an EXEC based on the update
+ information for the template file used.
+ 
+.CS 1 OFF
+.CS 2 ON
+›|The format of the BLDEXEC command is:›%
+ 
+ >>--BLDEXEC--execname--fm--tfm--------------------------------------><
+ 
+›|Operands›%
+ 
+›|execname›%
+     The name of the exec template you wish to use as the base to be
+     built.
+ 
+›|fm›%
+     Filemode where the <execname> AUX<gen> file is located. Valid
+     values are A-Z.
+ 
+›|tfm›%
+     Identifies what filemode should be used for the newly-updated EXEC
+     file resulting from the build.
+ 
+›|How to Specify›%
+ 
+ BLDEXEC <execname> after creating a new change will take the  file
+ <execname> $EXEC and apply updates as required to build an updated
+ EXEC.
+ 
+›|Usage Notes›%
+ 
+   1.  This command should be used to generate an updated EXEC file
+       after every change.
+ 
+›|Examples›%
+ 
+   1.  To create an updated FOO EXEC file from the template FOO on
+       minidisk or SFS directory accessed as filemode C on your A disk,
+       use the following command:
+ 
+         BLDEXEC FOO C A
+ 
+       If the target filemode is omitted, the file will be created on
+       the disk accessed as filemode A.
+ 
+.CS 2 OFF

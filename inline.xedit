@@ -1,0 +1,230 @@
+/* REXX */
+/*********************************************************************/
+/*********************************************************************/
+/* INLINE  XEDIT: Include standard routines from MACLIB in current   */
+/*                file                                               */
+/*                                                                   */
+/*      Author  : David Boyes                                        */
+/*     License  : BSD                                                */
+/*********************************************************************/
+/*********************************************************************/
+/* Maintenance Log                                                   */
+/* Date         Initials                 Description                 */
+/* 2020-10-5     DB             Created macro                        */
+/*                                                                   */
+/*********************************************************************/
+/**** Begin Main Program                                          ****/
+/*********************************************************************/
+parse arg argline                     /* snapshot cmdline            */
+ 
+call Set_Default_Constants            /* some useful constants       */
+call Supply_WS_Vars                   /* any default values?         */
+call Parse_Argline argline            /* parse argline               */
+call Parse_Options optionstr          /* parse options               */
+call File_Exists libname 'MACLIB *'   /* does maclib exist?          */
+ 
+if rc /= RX_OK then do
+  'EMSG Maclib' maclib 'is not on a accessed disk'
+  rc = RX_FAIL                        /* known fail rc               */
+  exit rc                             /* and stop                    */
+end                                   /* end if rc /= RX_OK          */
+ 
+call Address_Xedit                    /* default to XEDIT cmd        */
+ 
+'TOP'                                 /* start at top of file        */
+ 
+'EXTRACT /SIZE/'                      /* file size in lines          */
+lines = SIZE.1                        /* out of magic Xedit var      */
+ 
+curline = 1                           /* make sure we trigger do     */
+ 
+do while curline <= lines             /* do until EOF                */
+ 
+if do_reset = true then do            /* we just inlined something   */
+   'TOP'                              /* restart at top of file      */
+   do_reset = false                   /* clear reset flag            */
+end                                   /* if do_reset                 */
+ 
+'EXTRACT /LINE/'                      /* get current line #          */
+curline = LINE.1                      /* out of magic Xedit var      */
+'EXTRACT /CURLINE/'                   /* get current line contents   */
+line_contents = CURLINE.3             /* out of magic Xedit var      */
+ 
+if word(line_contents,2) /= ,         /* not an include              */
+ '$$INCLUDE' then do
+   'NEXT'                             /* next line                   */
+   iterate                            /* and do next iteration       */
+ end                                  /* end if do                   */
+ 
+parse var line_contents . . member ,  /* strip off extra stuff       */
+  desc .
+ 
+do_it = false                         /* default to skip             */
+ 
+if scope = member then do_it = true   /* this is the one             */
+ 
+if do_all = false then do            /* we are only doing 1 specific */
+   'NEXT'                             /* next line                   */
+   iterate                            /* and go on                   */
+end                                   /* end if                      */
+ 
+if do_all = true then do_it = true    /* if we do all, then do it    */
+ 
+if do_it = true then do               /* do it for this line         */
+'DELETE'                              /* delete $$INCLUDE line       */
+'MSG Inlining' member '(' desc ')  at line:' curline /*   what to do */
+ call Address_CMS                     /* back to CMS cmds            */
+ 'SET CMSTYPE HT'                     /* silence CMS                 */
+ 'MACLIB MAP' libname member '( TERM' /* search for member           */
+ src = rc
+ 'SET CMSTYPE RT'                     /* resume output               */
+ if src=RX_MEMNOTFOUND then do        /* member not found            */
+   call Address_Xedit                 /* switch to Xedit             */
+   'EMSG Member' member 'not found' , /* tell them                   */
+      'in' libname
+   call Address_CMS                   /* switch back to CMS          */
+ end                                  /* end if src=4                */
+ 
+ 'FILEDEF INMOVE DISK' ,              /* member in maclib            */
+  libname 'MACLIB * ( MEMBER' member
+ 'FILEDEF OUTMOVE DISK' ,             /* tmp output file             */
+    '$$$ COPY A3'                     /* fm 3 erased on next read    */
+ 'MOVEFILE'                           /* get routine out of maclib   */
+ 
+ call Silence_Output                  /* quiet please                */
+ call Address_Xedit                   /* switch back to XEDIT        */
+ call Silence_Output                  /* quiet please                */
+ 'GET $$$ COPY A'                     /* insert after curr line      */
+'EXTRACT /SIZE/'                      /* file size in lines after get*/
+lines = SIZE.1                        /* out of magic Xedit var      */
+end                                   /* end do                      */
+ call Resume_Output                   /* resume output               */
+'NEXT'                                /* next line                   */
+'SSAVE'                               /* save file                   */
+do_reset = true                       /* reset to beginning          */
+end                                   /* do while not eof            */
+ 
+'MSG Inline processing complete.'     /* inform we're done           */
+ 
+call End_Program                      /* clean up and exit           */
+exit rc                               /* bye                         */
+ 
+ 
+/*********************************************************************/
+/**** Subroutines                                                 ****/
+/*********************************************************************/
+ 
+/*********************************************************************/
+Set_Default_Constants:        /* set constants if any                */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  RX_OK = 0                           /* symbolic for REXX OK rc     */
+  RX_FAIL = 28                        /* symbolic for REXX fail      */
+  RX_NULL_STR = 4                     /* null string                 */
+  RX_MEMNOTFOUND = 4                  /* member not found            */
+  rc = RX_OK                          /* return RX_OK                */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Parse_Argline:                /* parse argline according to pattern  */
+/*********************************************************************/
+                                      /* Return Codes:               */
+  parse arg argline                   /* 0 = success (always)        */
+  parse var argline scope .     '(' , /* pattern for parse           */
+    optionstr                         /*                             */
+  if scope = '' then scope = '*'      /* if didn't spec, then do all */
+  if scope = '*' then do_all = true   /* set do_all flag             */
+  rc = RX_OK                          /* always exit successfuly     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Parse_Options:                /* parse option string if supplied     */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  parse var optionstr option .        /* parse pattern               */
+  upper option                        /* uppercase option            */
+  no_options = false                  /* init flag default           */
+  select                              /* option possiblities         */
+    when option = '' then do          /* no options present          */
+      libname = 'EXECLIB'             /* default to EXECLIB MACLIB   */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    when option /= '' then do         /* look in this maclib         */
+      libname = option                /* set libname to option       */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    otherwise do                      /* invalid option              */
+      say 'Logic error. Report how you got this.'            /* huh? */
+      rc = RX_FAIL                    /* exit rc = 28                */
+      end                             /* end otherwise               */
+  end                                 /* end select                  */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+File_Exists:                          /* does file exist?            */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = file exists             */
+                                      /* 28 = file not found         */
+  parse arg fn ft fm                  /* get parameters              */
+  filespec = fn ft fm                 /* construct filespec          */
+  'SET CMSTYPE HT'                    /* silence please              */
+  'LISTFILE' filespec                 /* search for file             */
+  src = rc                            /* save rc                     */
+  'SET CMSTYPE RT'                    /* resume output               */
+  if src ^= 0 then do                 /* not exist or error          */
+    rc = src                          /* returned saved rc           */
+    end                               /* end if                      */
+  else rc = RX_OK                     /* otherwise file exists       */
+  return rc                           /* end routine                 */
+ 
+ 
+/*********************************************************************/
+Supply_WS_Vars:               /* supply defaults for all input parms */
+                              /* and/or useful variables             */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+ 
+do_all = false                        /* default to do nothing       */
+rc = RX_OK                            /* success                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+End_Program:                  /* cleanup and exit                    */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+rc = RX_OK                            /* ok, bye                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Address_Xedit:                        /* command context is XEDIT    */
+/*********************************************************************/
+ address XEDIT                        /* XEDIT from here, baby       */
+ rc = RX_OK                           /* success                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Address_CMS:                          /* command context is CMS      */
+/*********************************************************************/
+ address CMS                          /* CMS from here, baby         */
+ rc = RX_OK                           /* success                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Silence_Output:                       /* suppress CMS output         */
+/*********************************************************************/
+  'SET CMSTYPE HT'                    /* silence output              */
+  rc=RX_OK                            /* all ok                      */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Resume_Output:                        /* resume   CMS output         */
+/*********************************************************************/
+  'SET CMSTYPE RT'                    /* silence output              */
+  rc=RX_OK                            /* all ok                      */
+return rc                             /* end routine                 */
+ 

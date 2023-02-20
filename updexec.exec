@@ -1,0 +1,174 @@
+/* REXX */
+/*********************************************************************/
+/*********************************************************************/
+/* UPDEXEC  EXEC: Build updated file and leave user in XEDIT         */
+/*                                                                   */
+/*                                                                   */
+/*      Author  : David Boyes                                        */
+/*     License  : BSD                                                */
+/*********************************************************************/
+/*********************************************************************/
+/* Maintenance Log                                                   */
+/* Date         Initials                 Description                 */
+/* 2020-09-27    DB             Created exec                         */
+/* 2020-09-28    DB             Changed template file names          */
+/*                              Fix argline processing               */
+/*                              Fix abbrev issue                     */
+/*                                                                   */
+/*********************************************************************/
+/**** Begin Main Program                                          ****/
+/*********************************************************************/
+ 
+parse arg argline                     /* stash argline               */
+call Set_Default_Constants     /* set some helpful logical constants */
+call Parse_Argline argline            /* separate parms from options */
+call Parse_Options optionstr          /* get option vals and validate*/
+call Supply_WS_Vars           /* construct useful vars for use later */
+call File_Exists basefile             /* check if base file exists   */
+rc1 = rc                              /* save rc from 1st check      */
+call File_Exists cntrlfile           /* check that cntrl file exists */
+rc2 = rc                              /* save rc from 2nd check      */
+rctmp = rc1 + rc2                     /* sum of check rc should be 0 */
+select                                /* do it                       */
+  when option_metadata = true then do /* we're editing metadata      */
+    if rctmp ^= RX_OK then do         /* unless parts arent there    */
+      say 'Component part missing. Check AUX files'         /* error */
+      exit RX_FAIL                    /* bail                        */
+    end                               /* end if                      */
+    call Do_Edit_Metadata             /* go ahead                    */
+    end                               /* end when                    */
+  when rctmp = RX_OK then do          /* otherwise edit file         */
+    call Do_Edit                      /* do normal edit              */
+    end                               /* end when                    */
+  otherwise do                        /* logic error                 */
+    say 'Logic Error. Report how you got this, please.'   /* obvious */
+    end                               /* end otherwise               */
+end                                   /* end select                  */
+call End_Program
+exit rc
+ 
+/*********************************************************************/
+/**** Subroutines                                                 ****/
+/*********************************************************************/
+ 
+/*********************************************************************/
+Set_Default_Constants:        /* set constants if any                */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  RX_OK = 0                           /* symbolic for REXX OK rc     */
+  RX_FAIL = 28                        /* symbolic for REXX fail      */
+  RX_NULL_STR = 4                     /* null string                 */
+  rc = RX_OK                          /* return RX_OK                */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Save_Argline:                 /* capture argline as supplied         */
+/*********************************************************************/
+  parse arg argline                /* get original command line args */
+  rc = RX_OK                          /* always exit successfuly     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Parse_Argline:                /* parse argline according to pattern  */
+/*********************************************************************/
+                                      /* Return Codes:               */
+  parse arg argline                   /* 0 = success (always)        */
+  parse var argline execname fm '(' , /* pattern for parse           */
+    optionstr                         /*                             */
+  rc = RX_OK                          /* always exit successfuly     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Parse_Options:                /* parse option string if supplied     */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  parse var optionstr option .        /* parse pattern               */
+  upper option                        /* uppercase option            */
+  no_options = false                  /* init flag default           */
+  option_metadata = false             /* init flag default           */
+  select                              /* option possiblities         */
+    when option = '' then do          /* no options present          */
+      no_options = true               /* flag it                     */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    when abbrev(option,'METADATA') ,  /* check for METADATA opt      */
+      then do                         /*                             */
+      option_metadata = true          /* got it                      */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    otherwise do                      /* invalid option              */
+      rc = RX_FAIL                    /* exit rc = 28                */
+      end                             /* end otherwise               */
+  end                                 /* end select                  */
+return rc                             /* end routine                 */
+ 
+ 
+/*********************************************************************/
+Supply_WS_Vars:               /* supply defaults for all input parms */
+                              /* and/or useful variables             */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+ 
+basefile = execname '$EXEC' fm        /* base filespec               */
+cntrlfile = execname 'CNTRL' fm       /* control filespec            */
+rc = RX_OK                            /* success                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+File_Exists: procedure                /* does file exist?            */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = file exists             */
+                                      /* 28 = file not found         */
+  parse arg fn ft fm                  /* get parameters              */
+  filespec = fn ft fm                 /* construct filespec          */
+  'SET CMSTYPE HT'                    /* silence please              */
+  'LISTFILE' filespec                 /* search for file             */
+  src = rc                            /* save rc                     */
+  'SET CMSTYPE RT'                    /* resume output               */
+  if src ^= 0 then do                 /* not exist or error          */
+    rc = src                          /* returned saved rc           */
+    end                               /* end if                      */
+  else rc = RX_OK                     /* otherwise file exists       */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Do_edit:                      /* invoke XEDIT with CTL option        */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = edit rc good            */
+                                      /* rc > 0 = error from edit    */
+'XEDIT' basefile '( CTL' ,            /* edit it                     */
+   execname                           /*                             */
+src = rc                              /* save rc                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Do_Edit_Metadata:             /* invoke XEDIT with CTL option        */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = edit rc good            */
+                                      /* rc > 0 = error from edit    */
+'XEDIT' basefile '( CTL' execname  ,  /* edit it up to METADATA      */
+   'UNTIL METADATA'                   /*                             */
+src = rc                              /* save rc                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+End_Program:                  /* cleanup and exit                    */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+rc = RX_OK                            /* ok, bye                     */
+return rc                             /* end routine                 */
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

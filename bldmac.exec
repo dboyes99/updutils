@@ -1,0 +1,139 @@
+/* REXX */
+/*********************************************************************/
+/*********************************************************************/
+/* BLDMAC   EXEC: Build exec fragment lib from COPY files            */
+/*                                                                   */
+/*                                                                   */
+/*      Author  : David Boyes                                        */
+/*     License  : BSD                                                */
+/*********************************************************************/
+/*********************************************************************/
+/* Maintenance Log                                                   */
+/* Date         Initials                 Description                 */
+/* 2020-09-30    DB             Created exec                         */
+/*                                                                   */
+/*********************************************************************/
+/**** Begin Main Program                                          ****/
+/*********************************************************************/
+ 
+ 
+parse arg argline
+call Set_Default_Constants            /* set logical constants       */
+call Parse_Argline argline            /* separate parms from opt     */
+call Parse_Options optionstr         /* get option vals and validate */
+call Supply_WS_Vars                   /* construct useful vars       */
+call File_Exists libname 'MACLIB' fm  /* file exists?                */
+rc1 = rc                              /* stash rc                    */
+call File_Exists libname 'MANIFEST *' /* what to put in it           */
+rc2 = rc
+if rc1 = RX_OK then do
+  if option_overwrite = true then do  /* check if ok to destroy      */
+     'RENAME' libname 'MACLIB' fn libname 'MACOLD' fn
+     'PIPE < ' libname 'MANIFEST' fm , /* get manifest               */
+        '| STEM manifest'              /* and store                  */
+     'PIPE STEM manifest' ,           /* read the manifest items     */
+        '| UNPACKX' ,                 /* unpack if packed            */
+        '| MACWRITE' libname 'MACLIB' fm 'F 80'/* and create new one */
+     if rc = RX_OK then do            /* if succesful, then kill old */
+     'ERASE' libname 'MACOLD' fn    /* now get rid of old one        */
+     end
+     else do                         /* error in creating new maclib */
+       say 'Error creating new' libname 'MACLIB' fm
+       say 'Old library retained as' libname 'MACOLD' fm
+       say 'Check what happened or rename old library'
+       exit RX_FAIL
+     end                              /* end else do                 */
+  end                                 /* if option_overwrite         */
+end                                   /* if rc = RX_OK               */
+ 
+call End_Program                      /* clean up                    */
+exit rc
+ 
+/*********************************************************************/
+/**** Subroutines                                                 ****/
+/*********************************************************************/
+ 
+/*********************************************************************/
+Parse_Argline:                /* parse argline according to pattern  */
+/*********************************************************************/
+                                      /* Return Codes:               */
+  parse arg argline                   /* 0 = success (always)        */
+  parse var argline libname  fm '(' , /* pattern for parse           */
+    optionstr                         /*                             */
+  rc = RX_OK                          /* always exit successfuly     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Set_Default_Constants:        /* set constants if any                */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  RX_OK = 0                           /* symbolic for REXX OK rc     */
+  RX_FAIL = 28                        /* symbolic for REXX fail      */
+  RX_NULL_STR = 4                     /* null string                 */
+  rc = RX_OK                          /* return RX_OK                */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Supply_WS_Vars:               /* supply defaults for all input parms */
+                              /* and/or useful variables             */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+ 
+basefile = execname '$EXEC' fm        /* base filespec               */
+cntrlfile = execname 'CNTRL' fm       /* control filespec            */
+rc = RX_OK                            /* success                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+Parse_Options:                /* parse option string if supplied     */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+  parse var optionstr option .        /* parse pattern               */
+  upper option                        /* uppercase option            */
+  no_options = false                  /* init flag default           */
+  option_metadata = false             /* init flag default           */
+  select                              /* option possiblities         */
+    when option = '' then do          /* no options present          */
+      no_options = true               /* flag it                     */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    when abbrev(option,'METADATA') ,  /* check for METADATA opt      */
+      then do                         /*                             */
+      option_metadata = true          /* got it                      */
+      rc = RX_OK                      /* exit RX_OK                  */
+      end                             /* skip                        */
+    otherwise do                      /* invalid option              */
+      rc = RX_FAIL                    /* exit rc = 28                */
+      end                             /* end otherwise               */
+  end                                 /* end select                  */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+End_Program:                  /* cleanup and exit                    */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = success (always)        */
+rc = RX_OK                            /* ok, bye                     */
+return rc                             /* end routine                 */
+ 
+/*********************************************************************/
+File_Exists:                          /* does file exist?            */
+/*********************************************************************/
+                                      /* Return Codes:               */
+                                      /* 0 = file exists             */
+                                      /* 28 = file not found         */
+  parse arg fn ft fm                  /* get parameters              */
+  filespec = fn ft fm                 /* construct filespec          */
+  'SET CMSTYPE HT'                    /* silence please              */
+  'LISTFILE' filespec                 /* search for file             */
+  src = rc                            /* save rc                     */
+  'SET CMSTYPE RT'                    /* resume output               */
+  if src ^= 0 then do                 /* not exist or error          */
+    rc = src                          /* returned saved rc           */
+    end                               /* end if                      */
+  else rc = RX_OK                     /* otherwise file exists       */
+  return rc                           /* end routine                 */
+ 

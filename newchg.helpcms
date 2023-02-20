@@ -1,0 +1,109 @@
+.cm (C) Copyrighted IBM 2020 (from IBM Form SC19-6209)
+.cm BookMaster Style BOOKHELP, for NEWCHG   HELPCMS .
+.cm BOOKHELP source: NEWCHG SCRPCMS C
+.cm BOOKHELP processed at 16:15:01 5 Oct 2020.
+.CS 1 ON
+ 
+›|NEWCHG›%
+ 
+›|Brief Summary of Statement:›%
+ 
+ This command adds a new change to the AUX file for an exec. The change
+ can then be created using XEDIT file $EXEC ( CTL file.
+ 
+›|Use the NEWCHG command to:›%
+ 
+ This command adds a new change to the AUX file for an exec. The change
+ can then be created using XEDIT file $EXEC ( CTL file.
+ 
+.CS 1 OFF
+.CS 2 ON
+›|The format of the NEWCHG command is:›%
+ 
+ >>--NEWCHG--execname--fm--newentry--desc--(--.-----.----------------><
+                                              '-gen-'
+ 
+›|Operands›%
+ 
+›|execname›%
+     The name of the exec template you wish to modify. This name
+     identifies which template base file AUX file is to be modified.
+ 
+›|fm›%
+     Filemode where the <execname> AUX<gen> file is located. Valid
+     values are A-Z.
+ 
+›|newentry›%
+     The name of the new change to be added. A line for <execname>
+     <newentry> will be added to the AUX<gen> file. XEDIT execname
+     $EXEC ( CTL execname will create the file as necessary.
+ 
+›|desc›%
+     Short (30-40 characters) description of the purpose of the change.
+     This entry will be identified in the update log for this file.
+     See HELP CMS BLDEXEC for more information.
+ 
+›|gen›%
+     Indicate which generation of AUX file for file with more than one
+     group of changes to apply. 000 is the base template for the exec,
+     001 is the default group of changes to the base file. See the
+     z/VM: CMS Application Developers guide for more information on
+     multiple groups of changes to a file.
+ 
+›|How to Specify›%
+ 
+ Issue the command at the beginning of creating a change to the base
+ file. UPDEXEC <execname> will take the base file, apply all available
+ updates, and place you in XEDIT to create or change the file. The
+ change file will be stored on the supplied filemode. Multiple sessions
+ of UPDEXEC will be appended to the last change until the next use of
+ NEWCHG. BLDEXEC <execname> after creating a new change will take the
+ file <execname> $EXEC and apply updates as required to build an
+ updated EXEC.
+ 
+›|Usage Notes›%
+ 
+   1.  Any updates to an exec where this set of tools is used should
+       always start with a NEWCHG command. NEWCHG updates the build
+       system metadata for the file to include the new change entry.
+ 
+   2.  UPDEXEC <execname> <fm> actually creates and populates the
+       change information as described by the UPDATE metadata. The
+       change will not appear in the <execname> EXEC file until the
+       BLDEXEC <execname> <fm> command is run.
+ 
+   3.  By default, updates to a EXEC file are restricted to columns
+       1-72 to allow for serial numbers and other control information.
+       REXX permits freeform spanning of statements across multiple
+       records. See z/VM: REXX/VM Reference for more information on
+       continuations.
+ 
+›|Examples›%
+ 
+   1.  For a new EXEC file FOO EXEC to be managed with this tool on the
+       minidisk or SFS directory accessed as filemode C, use the
+       following steps:
+ 
+         a.  Create the template for FOO EXEC using NEWEXEC:
+ 
+               NEWEXEC FOO C
+ 
+         b.  Update the file metadata for the first time by performing:
+ 
+               UPDEXEC FOO C ( METADATA
+ 
+         c.  Register a new change to the file, using:
+ 
+               NEWCHG FOO C UPD001 Add FUMBLE option when needed
+ 
+         d.  Use UPDEXEC to create the content for the change using:
+ 
+               UPDEXEC FOO C
+ 
+             The necessary files to implement the change will be
+             created if they do not exist at runtime. If this is the
+             second or subseqent use of UPDEXEC (say after an overnight
+             interruption), the change content will be appended to the
+             change until the next run of NEWCHG.
+ 
+.CS 2 OFF

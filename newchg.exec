@@ -1,0 +1,120 @@
+/* REXX */
+/*********************************************************************/
+/*********************************************************************/
+/* NEWCHG   EXEC: Add new change entry to execname AUXgen file       */
+/*                                                                   */
+/*      Author  : David Boyes                                        */
+/*     License  : BSD                                                */
+/*********************************************************************/
+/*********************************************************************/
+/* Maintenance Log                                                   */
+/* Date         Initials                 Description                 */
+/* ------------------------------------------------------------------*/
+/* 2020-09-17    DB             Created exec                         */
+/*                                                                   */
+/*                                                                   */
+/*********************************************************************/
+/**** Begin Main Program                                          ****/
+/*********************************************************************/
+ 
+parse arg argline                     /* get unmodified argline      */
+ 
+parse var argline execname fm newentry desc '(' gen    /* parse args */
+ 
+if gen = '' then gen = '001'          /* default if gen omitted      */
+ 
+if desc = '' then desc = 'Insert Description here'
+ 
+upper execname fm newentry
+ 
+ 
+testfile = execname 'AUX' || gen fm
+ 
+if newentry = '' then do              /* gotta have the name to add  */
+  say 'New entry name cannot be blank'
+  exit 28
+end
+ 
+call File_Exists testfile             /* make sure AUX file exists   */
+ 
+if rc /= 0 then do                    /* no such file                */
+  say 'No such' execname 'AUX'||gen 'file on filemode' fm
+  say 'Correct and rerun.'
+  exit rc
+end
+ 
+call Read_Existing testfile     /* get existing contents of aux file */
+ 
+if rc /= 0 then do                    /* something happened          */
+  say 'Error' rc 'reading' testfile
+  say 'Find out what happened.'
+  exit rc
+end
+ 
+newaux.0 = 0                      /* initialize stem for new content */
+ 
+call Add_Entry testfile               /* add new entry to aux file   */
+call Append_Old_Aux                   /* append the old contents of  */
+                                      /* aux file                    */
+call Write_New_Aux                    /* write new aux contents      */
+call Write_New_Update                 /* create blank update file    */
+if rc /= 0 then do                    /* something happened          */
+   say 'Error' rc 'writing file' testfile
+   say 'Find out what happened.'
+   exit 28
+end
+ 
+say 'Update ID' newentry 'added to AUX file' testfile
+exit 0
+ 
+ 
+/*********************************************************************/
+/**** Subroutines                                                 ****/
+/*********************************************************************/
+ 
+File_Exists:                          /* does file exist?            */
+  parse arg fn ft fm                  /* parms for proc              */
+  filespec = fn ft fm                 /* construct filespec          */
+  'SET CMSTYPE HT'                    /* silence please              */
+  'LISTFILE' filespec                 /* try to find filespec        */
+  src = rc                            /* save rc                     */
+  'SET CMSTYPE RT'                    /* resume output               */
+  rc = src                            /* restore rc                  */
+  return rc                           /* return                      */
+ 
+Read_Existing:                      /* get contents of existing file */
+  parse arg fn ft fm                  /* get arg                     */
+  filespec = fn ft fm                 /* construct filespec          */
+  'PIPE <' filespec ,                 /* read file                   */
+     '| STEM oldaux'                  /* into stem OLDAUX            */
+  src = rc                            /* save rc                     */
+  return src                          /* return rc                   */
+ 
+Add_Entry:                           /* add new entry to stem newaux */
+  newline  = justify(newentry, 11)    /* build first part of line    */
+  newline = newline || desc           /* append description          */
+  'PIPE LITERAL' newline ,            /* add new entry to newaux     */
+     '| STEM NEWAUX'
+  return                              /* return                      */
+ 
+Append_Old_Aux:        /* append contents of old aux file to new one */
+  'PIPE STEM NEWAUX' ,            /* append old file to new contents */
+     '| APPEND STEM OLDAUX' ,
+     '| STEM NEWAUX'
+  return                              /* return                      */
+ 
+Write_New_Aux:                        /* write new aux file          */
+  'PIPE STEM NEWAUX' ,              /* new contents to old file name */
+     '| >' testfile                   /* in fixed form               */
+  'COPYFILE' testfile '( RECFM F' ,   /* convert back to F 80        */
+     'LRECL 80 REPLACE'
+  return rc                           /* return                      */
+ 
+Write_New_Update:                     /* write new aux file          */
+  testfile = execname newentry fm
+  comment = './ *'
+  'PIPE LITERAL' comment ,          /* new contents to old file name */
+     '| >' testfile                   /* in fixed form               */
+  'COPYFILE' testfile '( RECFM F' ,   /* convert back to F 80        */
+     'LRECL 80 REPLACE'
+  return rc                           /* return                      */

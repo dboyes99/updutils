@@ -1,0 +1,107 @@
+.cm (C) Copyrighted IBM 2020 (from IBM Form SC19-6209)
+.cm BookMaster Style BOOKHELP, for BLDMAC   HELPCMS .
+.cm BOOKHELP source: BLDMAC SCRPCMS D
+.cm BOOKHELP processed at 00:27:37 6 Oct 2020.
+.CS 1 ON
+ 
+›|BLDMAC›%
+ 
+›|Brief Summary of Statement:›%
+ 
+ This command builds a new copy of the specified MACLIB from the files
+ listed in the corresponding MANIFEST file.
+ 
+›|Use the BLDMAC command to:›%
+ 
+ This command builds a new copy of the specified MACLIB from the files
+ listed in the corresponding MANIFEST file.
+ 
+.CS 1 OFF
+.CS 2 ON
+›|The format of the BLDMAC command is:›%
+ 
+ >>--BLDMAC--maclibname--fm------------------------------------------><
+ 
+›|Operands›%
+ 
+›|maclibname›%
+     The name of the MACLIB you wish to create. This filename is used
+     both for the new MACLIB and the filename of the MANIFEST file
+     listing the contents to be added to the MACLIB after generation.
+ 
+›|fm›%
+     Filemode where the <maclibname> MACLIB file is to be located.
+     Valid values are A-Z.
+ 
+›|How to Specify›%
+ 
+ BLDMAC reads a file <maclibname> MANIFEST to determine what members to
+ add to <maclibname> MACLIB.  Each file listed in the MANIFEST file is
+ included as a member in the MACLIB using the CMS filename as the
+ member name.
+ 
+›|Usage Notes›%
+ 
+   1.  The MANIFEST file is expected to contain the filename and
+       filetype of the content to be included, one file per line. While
+       any filename and filetype can be used, <filename> COPY is
+       generally used for compatibility with the CMS MACLIB command. An
+       optional explicit filemode letter may be included in the
+       MANIFEST file if the file on a specific disk or SFS directory is
+       desired.
+ 
+   2.  While files with records longer than 80 characters can be
+       inserted in a CMS MACLIB file, BLDMAC limits you to RECFM F,
+       LRECL 80 files for compatibility with OS library files.
+ 
+   3.  Files listed in the MANIFEST file may reside on any accessed
+       disk or SFS directory. The filemode for individual files may be
+       omitted if desired which causes BLDMAC to look on all accessed
+       disks according to the CMS search order.
+ 
+   4.  If files with the same filename and filetype exist on multiple
+       accessed disks, the first file in the search order is used to
+       create the MACLIB unless an explicit filemode is included in the
+       MANIFEST file.
+ 
+   5.  This exec uses the CMS Pipeline 'maclib' stage to perform the
+       MACLIB generation and additions (in place of the CMS MACLIB
+       command).  It does not require a writable A-disk to generate the
+       MACLIB (the CMS MACLIB command requires a writable A-disk).
+ 
+   6.  The CMS MACLIST command can be used to browse the resulting
+       MACLIB file and view individual members. Refer to the z/VM: CMS
+       Command and Macro Reference for addtional information on using
+       the MACLIST command.
+ 
+   7.  Members may be extracted from the resulting MACLIB using the
+       following commands:
+ 
+         FILEDEF INMOVE  DISK <maclibname> MACLIB fm ( MEMBER member
+         FILEDEF OUTMOVE DISK fn ft fm
+         MOVEFILE
+ 
+›|Examples›%
+ 
+   1.  To create FOO MACLIB C, use these steps:
+ 
+         a.  Create each individual segment that will become members of
+             the MACLIB as separate files with a filetype of COPY. In
+             this example, we will create three members, FILEA COPY,
+             FILEB COPY and FILEC COPY.
+ 
+         b.  Create file FOO MANIFEST and add one filename and filespec
+             per line.
+ 
+               FILEA COPY
+               FILEB COPY
+               FILEC COPY
+ 
+         c.  Generate the MACLIB by issuing:
+ 
+               BLDMAC FOO C
+ 
+       The resulting MACLIB will be written to the disk or SFS
+       directory accessed as C.
+ 
+.CS 2 OFF

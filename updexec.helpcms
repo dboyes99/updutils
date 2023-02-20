@@ -1,0 +1,92 @@
+.cm Text (c) IBM Corporation,1964-2020 (from IBM pub SC24-6271-02)
+.cm BookMaster Style BOOKHELP, for UPDEXEC  HELPCMS .
+.cm BOOKHELP source: UPDEXEC SCRPCMS C
+.cm BOOKHELP processed at 16:07:23 5 Oct 2020.
+.CS 1 ON
+ 
+›|UPDEXEC›%
+ 
+›|Brief Summary of Statement:›%
+ 
+ This command uses XEDIT to apply the change history to the file and
+ leave the user in XEDIT to make the changes desired.
+ 
+ The METADATA option edits the module control metadata for tracking the
+ buildand ensuring that files are correctly catalogued in ths SNA build
+ system.
+ 
+›|Use the UPDEXEC command to:›%
+ 
+ This command uses XEDIT to apply the change history to the file and
+ leave the user in XEDIT to make the changes desired.
+ 
+ The METADATA option edits the module control metadata for tracking the
+ buildand ensuring that files are correctly catalogued in ths SNA build
+ system.
+ 
+.CS 1 OFF
+.CS 2 ON
+›|The format of the UPDEXEC command is:›%
+ 
+ >>--UPDEXEC--execname--fm--(--.----------.--------------------------><
+                               '-METADATA-'
+ 
+›|Operands›%
+ 
+›|execname›%
+     The name of the exec template you wish to modify. This name
+     identifies which template base file AUX file is to be modified.
+ 
+›|fm›%
+     Filemode where the <execname> AUX<gen> file is located. Valid
+     values are A-Z.
+ 
+›|METADATA›%
+     Update the file metadata for use by the build system. The
+     information and updates in the <execname> AUX000 file are assumed
+     to be the metadata information.
+ 
+›|How to Specify›%
+ 
+ Issue the command at the beginning of creating a change to the base
+ file. UPDEXEC <execname> will take the base file, apply all available
+ updates, and place you in XEDIT to make changes the file. The change
+ file will be stored on the supplied filemode. Multiple sessions of
+ UPDEXEC will be appended to the last change until the next use of
+ NEWCHG.
+ 
+›|Usage Notes›%
+ 
+   1.  UPDEXEC <execname> <fm> uses the metadata information created
+       with NEWCHG to apply the update stream to <execname> $EXEC and
+       places you in XEDIT to make changes to the file. Changes are
+       stored as part of the last active change created by NEWCHG.
+ 
+   2.  The change will not appear in the <execname> EXEC file until the
+       BLDEXEC <execname> <fm> command is run.
+ 
+   3.  By default, updates to a EXEC file are restricted to columns
+       1-72 to allow for serial numbers and other control information.
+       REXX permits freeform spanning of statements across multiple
+       records. See z/VM: REXX/VM Reference for more information on
+       continuations.
+ 
+›|Examples›%
+ 
+   1.  To update the build metadata for a new EXEC file FOO EXEC to be
+       managed with this tool on the minidisk or SFS directory accessed
+       as filemode C, use the following:
+ 
+         UPDEXEC FOO C ( METADATA
+ 
+   2.  Use UPDEXEC to create the content for the change using:
+ 
+         UPDEXEC FOO C
+ 
+       The necessary files to implement the change described in the
+       metadata will be created if they do not exist. If this is the
+       second or subseqent use of UPDEXEC (say after an overnight
+       interruption), the change content will be appended to the change
+       until the next run of NEWCHG.
+ 
+.CS 2 OFF

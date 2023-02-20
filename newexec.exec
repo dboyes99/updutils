@@ -1,0 +1,84 @@
+/* REXX */
+/*********************************************************************/
+/*********************************************************************/
+/* NEWEXEC  EXEC: Set up new EXEC template for CMS UPDATE            */
+/*                Copy template to new exec name                     */
+/*                                                                   */
+/*      Author  : David Boyes                                        */
+/*     License  : BSD                                                */
+/*********************************************************************/
+/*********************************************************************/
+/* Maintenance Log                                                   */
+/* Date         Initials                 Description                 */
+/* ------------------------------------------------------------------*/
+/* 2020-08-17    DB             Created exec                         */
+/* 2020-08-27    DB             Separated template from initial      */
+/*                                program content in AUX001          */
+/*                                                                   */
+/*********************************************************************/
+/**** Begin Main Program                                          ****/
+/*********************************************************************/
+ 
+parse arg argline                     /* grab unmodified argline     */
+ 
+parse var argline execname fm .       /* name amd fm of new exec     */
+ 
+call Check_Exists                     /* if exists, exit immediately */
+if rc ^= 0  then do
+  say 'Exec already exists on filemode' fm
+  exit 28
+end
+ 
+call Copy_Template           /* copy template files to new exec name */
+if rc /= 0 then do                    /* something went wrong        */
+  say 'Error copying template. Investigate and try again.'
+  call Reset_Template                 /* cleanup                     */
+  exit 28                             /* die horribly                */
+end
+ 
+say execname 'template EXEC created on filemode' fm
+exit
+ 
+ 
+/*********************************************************************/
+/**** Begin Subroutines                                           ****/
+/*********************************************************************/
+ 
+Check_Exists:                        /* does new exec already exist? */
+ upper execname fm                    /* uppercase parms             */
+ filespec = execname '$EXEC' fm       /* setup filespec to check     */
+ 'SET CMSTYPE HT'                     /* silence CMS                 */
+ 'LISTFILE' filespec                  /* test for $EXEC              */
+ src = rc                             /* save return code            */
+ 'SET CMSTYPE RT'                     /* resume output               */
+ return src                           /* return                      */
+ 
+Copy_Template:                        /* copy template files         */
+ 'COPYFILE $$BASE CNTRL *' execname 'CNTRL' fm       /* control file */
+ rc1 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE $EXEC *' execname '$EXEC' fm       /* $EXEC   file */
+ rc2 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE AUX000 *' execname 'AUX000' fm         /* aux file */
+ rc3 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE AUX001   *' execname 'AUX001'   fm  /* inital temp */
+ rc6 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE TEMPLATE *' execname 'TEMPLATE' fm  /* inital temp */
+ rc4 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE METADATA *' execname 'METADATA' fm  /* inital temp */
+ rc5 = rc                             /* save rc for this step       */
+ 'COPYFILE $$BASE INITIAL  *' execname 'INITIAL ' fm  /* inital temp */
+ rc7 = rc                             /* save rc for this step       */
+ rc = rc1 + rc2 + rc3 + rc4 + rc5 ,   /* rc is sum of ind steps      */
+      + rc6 + rc7
+ return rc                            /* return                      */
+ 
+Reset_Template:                      /* if error, reset partial copy */
+ 'SET CMSTYPE HT'                     /* quiet please                */
+ 'ERASE' execname 'CNTRL' fm          /* remove template CNTRL       */
+ 'ERASE' execname '$EXEC' fm          /* remove template $EXEC       */
+ 'ERASE' execname 'AUX000' fm         /* remove template AUX000      */
+ 'ERASE' execname 'DB000000' fm       /* remove template update      */
+ 'ERASE' execname 'AUX001' fm         /* remove template AUX001      */
+ 'ERASE' execname 'DB000001' fm       /* remove template update      */
+ 'SET CMSTYPE RT'                     /* resume output               */
+ return

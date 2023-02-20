@@ -1,0 +1,70 @@
+.cm Text (c) IBM Corporation,1964-2020 (from IBM pub SC24-6271-02)
+.cm BookMaster Style BOOKHELP, for NEWEXEC  HELPCMS .
+.cm BOOKHELP source: NEWEXEC SCRPCMS C
+.cm BOOKHELP processed at 16:05:19 5 Oct 2020.
+.CS 1 ON
+ 
+›|NEWEXEC›%
+ 
+›|Brief Summary of Command:›%
+ 
+ NEWEXEC creates a new EXEC template suitable for maintenance with the
+ CMS update utilities.
+ 
+›|Use the NEWEXEC command to:›%
+ 
+ NEWEXEC creates a new EXEC template suitable for maintenance with the
+ CMS update utilities. Two initial updates and two AUX files (AUX000
+ and AUX001) are created by default, one to set up the template for
+ use, and the second one to isolate changes to the template so you
+ don't store the changes to the template in the template itself (so you
+ can change the template if you need to). New content updates for the
+ exec should go into the AUX001 file.
+ 
+ These templates are what Sine Nomine uses; you may wish to change them
+ for your own use. If you wish to change the templates, use XEDIT
+ $$BASE $EXEC ( CTL $$BASE UNTIL DB000001.
+ 
+.CS 1 OFF
+.CS 2 ON
+›|The format of the NEWEXEC command is:›%
+ 
+ >>--NEWEXEC--execname--fm-------------------------------------------><
+ 
+›|Operands›%
+ 
+›|execname›%
+     New exec file to be created. The name can be 1-8 characters and
+     must be a valid CMS filename.
+ 
+›|fm›%
+     Create exec on designated filemode. Valid values are A-Z.
+ 
+›|How to Specify›%
+ 
+ Run this tool to create a template EXEC file for maintenance with the
+ CMS update tools. This needs to be run once for each exec.
+ 
+›|Usage Notes›%
+ 
+   1.  The initial template for the new exec is stored in the files
+       beginning with $$BASE ft. These files can be maintained using
+       CMS update as well by using XEDIT $$BASE $EXEC ( CTL $$BASE
+       UNTIL DB000001.
+ 
+   2.  Edits to the template should be added to $$BASE AUX000 using the
+       NEWCHG $$BASE fn newentry desc ( 000 command.
+ 
+   3.  After creating the new exec, you should run UPDEXEC <execname>
+       <fm> ( METADATA before adding any content to initialize the exec
+       header and metadata. Following this, UPDEXEC <execname> <fm> to
+       add the initial content.
+ 
+›|Examples›%
+ 
+   1.  To create a new exec FOO using the defaults on filemode G, use
+       the following :
+ 
+         NEWEXEC FOO G
+ 
+.CS 2 OFF
